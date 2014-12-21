@@ -1,14 +1,11 @@
 package charlag.com.mmpisis;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Color;
-import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -22,8 +19,6 @@ import com.androidplot.xy.PointLabelFormatter;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
-
-import org.w3c.dom.Text;
 
 import java.util.Arrays;
 
@@ -42,6 +37,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Настройка интерфейса
         setContentView(R.layout.activity_main);
         mAEditText = (EditText) findViewById(R.id.aEditText);
         mVEditText = (EditText) findViewById(R.id.vEditText);
@@ -59,14 +55,26 @@ public class MainActivity extends Activity {
                 double a = Double.parseDouble(mAEditText.getText().toString());
                 int v = Integer.parseInt(mVEditText.getText().toString());
                 long n = Long.parseLong(mNEditText.getText().toString());
-                QueringModel model = new QueringModel(a, v, n);
+                if (a > 1) {
+                    AlertDialog dialog = new AlertDialog.Builder(MainActivity.this).
+                            setTitle("Ошибка!").
+                            setMessage("a должно быть меньше 1").
+                            setCancelable(true).
+                            create();
+                    dialog.show();
+                    return;
+                }
+
+                // Вычисления
+                ComputingModel model = new ComputingModel(a, v, n);
                 Log.d("TEST", "NEW TEST");
                 Number[] values = model.compute();
 
-                Number[] valuesChangedV = new QueringModel(a, v + v/2, n).compute();
+                Number[] valuesChangedV = new ComputingModel(a, v + v / 2, n).compute();
 
-                Number[] valuesChangedN = new QueringModel(a, v, n + n/2).compute();
+                Number[] valuesChangedN = new ComputingModel(a, v, n + n / 2).compute();
 
+                // Построение графиков
 
                 XYSeries series = new SimpleXYSeries(
                         Arrays.asList(values),
@@ -90,26 +98,40 @@ public class MainActivity extends Activity {
                 seriesFormat.setPointLabelFormatter(new PointLabelFormatter());
                 seriesFormat.configure(getApplicationContext(),
                         R.xml.line_point_formatter_with_plf1);
+                seriesFormat.setPointLabelFormatter(null);
 
                 LineAndPointFormatter seriesFormat1 = new LineAndPointFormatter(Color.RED,
                         Color.GREEN, null, null);
+                seriesFormat1.setPointLabelFormatter(null);
 
                 LineAndPointFormatter seriesFormat2 = new LineAndPointFormatter(Color.BLUE,
                         Color.CYAN, null, null);
+                seriesFormat2.setPointLabelFormatter(null);
 
-                // add a new series' to the xyplot:
+                // Добавить значения на график
                 mPlot.clear();
                 mPlot.addSeries(series, seriesFormat);
                 mPlot.addSeries(series1, seriesFormat1);
-                mPlot.addSeries(series2, seriesFormat);
+                mPlot.addSeries(series2, seriesFormat2);
                 mPlot.setTicksPerRangeLabel(3);
+                mPlot.getGraphWidget().setDrawMarkersEnabled(false);
                 mPlot.getGraphWidget().setDomainLabelOrientation(-45);
+
                 mPlot.redraw();
 
                 mPtTextView.setText(String.valueOf( model.computePt() ));
 
+                // Добавить таблицу на экран
+                mTable.removeAllViews();
+                TableRow firstRow = new TableRow(MainActivity.this);
+                firstRow.addView(makeTableCell("  #  "));
+                firstRow.addView(makeTableCell("Pi"));
+                firstRow.addView(makeTableCell("ch V"));
+                firstRow.addView(makeTableCell("ch N"));
+                mTable.addView(firstRow);
             for (int i = 0; i < v; i++) {
                 TableRow row = new TableRow(MainActivity.this);
+                row.addView(makeTableCell("  " + i + "  "));
                 row.addView(makeTableCell(String.format("%f2  ", (Double) values[i])));
                 row.addView(makeTableCell(String.format("%f2  ", (Double) valuesChangedV[i])));
                 row.addView(makeTableCell(String.format("%f2  ", (Double) valuesChangedN[i])));
@@ -117,6 +139,7 @@ public class MainActivity extends Activity {
             }
             for (int i = v; i < v + v/2; i++) {
                 TableRow row = new TableRow(MainActivity.this);
+                row.addView(makeTableCell(" " + i + " "));
                 row.addView(makeTableCell(""));
                 row.addView(makeTableCell(String.format("%f2  ", (Double) valuesChangedV[i])));
                 row.addView(makeTableCell(""));
@@ -126,30 +149,7 @@ public class MainActivity extends Activity {
         });
     }
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    View makeTableCell(String text) {
+    private View makeTableCell(String text) {
         TextView tv = new TextView(this);
         tv.setText(text);
         return tv;
